@@ -99,11 +99,12 @@ export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(reducer, initialAuthState);
 
   const apiPath = 'https://apidao.ddns.net';
+  const apiHostname = process.env.API_HOSTNAME;
 
   // @ts-ignore
   const login = async (params) => {
     console.log('Params', params);
-    const response = await axiosInstance.post(`${apiPath}/api/user/auth`, { params });
+    const response = await axiosInstance.post(`${apiHostname}/api/user/auth`, { params });
 
     if (response && response.data) {
       const { token, user, publicAddress } = response.data;
