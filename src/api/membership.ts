@@ -6,7 +6,7 @@ import erc20Abi from 'config/abi/erc20.json';
 import getProvider from 'wallets/utils';
 import { FeeTokenMembership, polygonMainnetTokens, polygonTestnetTokens } from 'config';
 
-const path = 'https://apidao.ddns.net/api/membership';
+const path = `${process.env.REACT_APP_API_HOSTNAME}/api/membership`;
 
 const getNonceSignature = async (providerName: string) => {
   let tokenAddress: string;

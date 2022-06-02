@@ -1,5 +1,6 @@
 import { createAlchemyWeb3 } from '@alch/alchemy-web3';
 import usdcAbi from 'contracts/usdc/usdcAbi.json';
+import { MaxUint256 } from '@ethersproject/constants';
 import erc20Abi from 'config/abi/erc20.json';
 import ERC20_INTERFACE, { ERC20_ABI, ERC20_BYTES32_ABI } from 'config/abi/erc20';
 import { getContract, getProviderOrSigner } from 'utils';
@@ -8,14 +9,20 @@ import { FeeTokenMembership, polygonMainnetTokens, polygonTestnetTokens } from '
 import getProvider from 'wallets/utils';
 
 const usdcAddress = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174';
+const linkAddress = '0x326C977E6efc84E512bB9C30f76E30c160eD06FB';
 const ALCHEMY_URL = `${process.env.REACT_APP_ALCHEMY_HOSTNAME}${process.env.REACT_APP_ALCHEMY_API_KEY}`;
 const web3 = createAlchemyWeb3(ALCHEMY_URL);
 
-const USDCContract = new web3.eth.Contract(
+const feeAddress = process.env.NODE_ENV !== 'development' ? usdcAddress : linkAddress;
+
+const contract = new web3.eth.Contract(
   // @ts-ignore
-  erc20Abi,
-  usdcAddress
+  ERC20_ABI,
+  feeAddress
 );
+
+const contractAddress =
+  process.env.NODE_ENV !== 'development' ? '' : '0x0e562f5D6869f20b5243E6C441149705906094E8';
 
 const approve = async () => {
   try {
@@ -36,38 +43,39 @@ const approve = async () => {
       console.log('Provider', provider);
       const signer = provider.getSigner();
       console.log('Signer', signer);
-      const contract = getContract(tokenAddress, erc20Abi, signer);
-      console.log('Contract', contract);
+      const contract2 = getContract(tokenAddress, erc20Abi, signer);
+      console.log('Contract', contract2);
       const walletAddress = await signer.getAddress();
       console.log('Address:', walletAddress);
-      const allowance = await contract.allowance(
-        walletAddress,
-        '0x0e562f5D6869f20b5243E6C441149705906094E8'
-      );
+      const allowance = await contract2.allowance(walletAddress, contractAddress);
       const allowanceNum = ethers.utils.formatEther(allowance);
       console.log('Allowance', allowanceNum);
       if (allowance < 1.0) {
-        // set up transaction parameters
-
-        console.log('USDCContract', USDCContract);
+        console.log('USDCContract', contract);
+        console.log('USDCContract methods', contract.methods);
 
         const transactionParameters = {
           to: tokenAddress,
           from: walletAddress,
-          data: USDCContract.methods
-            .approve(tokenAddress, ethers.utils.parseUnits('8', 18))
+          gas: ethers.utils.hexlify(46227),
+          data: contract.methods
+            .approve(contractAddress, ethers.utils.parseUnits('1', 18))
             .encodeABI(),
         };
 
-        // @ts-ignore
-        const txHash = await chosenProvider.request({
-          method: 'eth_sendTransaction',
-          params: [transactionParameters],
-        });
-        console.log('txHash', txHash);
+        console.log('chosenProvider', chosenProvider);
 
-        const success = await contract.approve(tokenAddress, ethers.utils.parseUnits('8', 18));
-        console.log('Success', success);
+        await chosenProvider
+          .request({
+            method: 'eth_sendTransaction',
+            params: [transactionParameters],
+          })
+          .then((txHash: any) => {
+            console.log('txHash', txHash);
+          })
+          .catch((error: any) => {
+            console.log('error', error);
+          });
       }
     }
 

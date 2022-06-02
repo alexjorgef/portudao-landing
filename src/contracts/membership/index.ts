@@ -8,14 +8,18 @@ import { ethers, BigNumber } from 'ethers';
 import { getContract, getProviderOrSigner } from 'utils';
 import { FeeTokenMembership, polygonMainnetTokens, polygonTestnetTokens } from 'config';
 
-const membershipAddress = '0x8e68c81ba9e3264e236b6d2273f601b385baa7b3';
 const ALCHEMY_API_KEY = 'https://eth-goerli.alchemyapi.io/v2/M1NeZMgxHETfrPflwiAGtiaMwn2bKMmX';
 const web3 = createAlchemyWeb3(ALCHEMY_API_KEY);
+
+const contractAddress =
+  process.env.NODE_ENV !== 'development'
+    ? '0x8e68c81ba9e3264e236b6d2273f601b385baa7b3'
+    : '0x0e562f5D6869f20b5243E6C441149705906094E8';
 
 const MembershipContract = new web3.eth.Contract(
   // @ts-ignore
   membershipABI.abi,
-  membershipAddress
+  contractAddress
 );
 
 const mint = async (signature: string, message: string) => {
@@ -33,8 +37,6 @@ const mint = async (signature: string, message: string) => {
 
     console.log('MembershipContract', MembershipContract);
 
-    const contractAddress = '0x0e562f5D6869f20b5243E6C441149705906094E8';
-
     const providerName = 'metamask';
     const chosenProvider = getProvider(providerName);
     const provider =
@@ -50,23 +52,23 @@ const mint = async (signature: string, message: string) => {
     const transactionParameters = {
       to: contractAddress,
       from: walletAddress,
+      gas: ethers.utils.hexlify(450000),
       data: MembershipContract.methods.mint(walletAddress, signature, message).encodeABI(),
     };
 
-    // @ts-ignore
-    const txHash = await chosenProvider.request({
-      method: 'eth_sendTransaction',
-      params: [transactionParameters],
-    });
-    console.log('txHash', txHash);
-
-    const contract = getContract(contractAddress, membershipAbi, signer);
-    console.log('Contract', contract);
-    const success = await contract.mint(walletAddress, signature, message);
-    return success;
+    await chosenProvider
+      .request({
+        method: 'eth_sendTransaction',
+        params: [transactionParameters],
+      })
+      .then((txHash: any) => {
+        console.log('txHash', txHash);
+      })
+      .catch((error: any) => {
+        console.log('error', error);
+      });
   } catch (error) {
     console.log('Membership mint error', error);
-    return false;
   }
 };
 
